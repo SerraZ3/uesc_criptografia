@@ -76,8 +76,8 @@ Sendo assim, percebe-se a permutação em que, na Imagem 2, o bit 58 foi permuta
 
 #### Observações
 
-* Até então, a função F está implementada com "Left Shift" circular
-* O arquivo redeFeisteln possui o código não modularizado
+* A pasta contendo o código modularizado está incompleto, falta conectar todos módulos no documento raiz (desP.c)
+* A pasta contendo o código NÃO modularizado está completo, porém falta organizar o código e retirar as modularização mínima existente.
 
 ### Compilação
 

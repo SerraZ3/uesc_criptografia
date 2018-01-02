@@ -237,6 +237,7 @@ int main (int argc, char **argv)
     size_t tam_meio_bloco_h = TAM_MEIO_BLOCO_H;
     char * nome_f_des;
     char * nome_f_log_ks;
+    char * nome_f_in;
     
     // Verifica a quantidade de argumentos
     if (argc < 4 || argc > 6)
@@ -270,7 +271,7 @@ int main (int argc, char **argv)
          */
         chave_8B.l = 0x0;
         chave_8B.r = 0x0;
-        if (strcmp(argv[2], "-c") == 0 || strcmp(argv[2], "-d") == 0)
+        if ((strcmp(argv[2], "-c") == 0) || (strcmp(argv[2], "-d") == 0))
         {
             if (strlen(argv[3]) != 8)
             {
@@ -286,7 +287,7 @@ int main (int argc, char **argv)
                 }
             }
         }
-        else if (strcmp(argv[2], "-ch") == 0 || strcmp(argv[2], "-dh") == 0)
+        else if ((strcmp(argv[2], "-ch") == 0) || (strcmp(argv[2], "-dh") == 0))
         {
             if (strlen(argv[3]) != 16)
             {
@@ -506,11 +507,10 @@ int main (int argc, char **argv)
          */
         tam_chave = strlen(argv[3]);
 
-        
         if ((argc == 5 && (strcmp(argv[4], "-logb") == 0 || (strcmp(argv[4], "-logh") == 0)))
             || (argc == 6 && (strcmp(argv[5], "-logb") == 0 || strcmp(argv[5], "-logh") == 0)))
         {
-            nome_f_log_ks = malloc((tam_chave + 12) * sizeof(char) + 1);
+            nome_f_log_ks = malloc(((tam_chave + 12) * sizeof(char)) + 1);
 
             if (nome_f_log_ks == NULL)
             {
@@ -794,7 +794,7 @@ int main (int argc, char **argv)
 
         // Armazenando nome do arquivo de saida
         tam_nome_f_in = strlen(argv[1]);
-        nome_f_des = malloc((tam_nome_f_in + tam_chave) * sizeof(char) + 2);
+        nome_f_des = malloc(tam_nome_f_in + tam_chave + 6);
         
         if (nome_f_des == NULL)
         {
@@ -804,6 +804,16 @@ int main (int argc, char **argv)
         
         strcpy(nome_f_des, argv[3]);
         strcat(nome_f_des, "-");
+
+        nome_f_in = malloc(tam_nome_f_in + 1);
+        
+        if (nome_f_in == NULL)
+        {
+            printf("Erro ao alocar memória p/ nome do arquivo de entrada.\n");
+            exit(1);
+        }
+        
+        strcpy(nome_f_in, argv[1]);
 
         for (j = 0, i = tam_chave + 1; j < tam_nome_f_in; j++, i++)
         {
@@ -816,10 +826,10 @@ int main (int argc, char **argv)
         // end-armazenando nome do arquivo de saida
 
         // Verifica a operação para cifrar
-        if (strcmp(argv[2], "-c") == 0 || strcmp(argv[2], "-ch") == 0)
+        if ((strcmp(argv[2], "-c") == 0) || (strcmp(argv[2], "-ch") == 0))
 		{
 	        // abreFluxoComArquivos
-			if ((f_in = fopen(argv[1], "r")) == NULL)
+			if ((f_in = fopen(nome_f_in, "r")) == NULL)
 	        {
 	            printf("O arquivo [%s] nao existe.\n", argv[1]);
 	            exit(1);
@@ -877,17 +887,19 @@ int main (int argc, char **argv)
             }
             else
                 cifreECB(&bit, f_in, f_out, &chave);
-            
+           	
             // Fecha fluxo com arquivos
             fclose(f_in);
             fclose(f_out);
+
+            printf("Criptografia finalizada.\n");
             
 		}
         // Verifica a operação para decifrar
 		else if (strcmp(argv[2], "-d") == 0 || strcmp(argv[2], "-dh") == 0)
         {
         	// abreFluxoComArquivos
-			if ((f_in = fopen(argv[1], "rb")) == NULL)
+			if ((f_in = fopen(nome_f_in, "rb")) == NULL)
 	        {
 	            printf("O arquivo [%s] nao existe\n", argv[1]);
 	            exit(1);
@@ -948,7 +960,10 @@ int main (int argc, char **argv)
 
             // Fecha fluxo com arquivos
             fclose(f_in);
-            fclose(f_out);            
+            fclose(f_out);
+
+            printf("Descriptografia finalizada.\n");
+
         }
 		else
             printf("DesP 1.0 (30 Novembro 2017)."
@@ -976,6 +991,7 @@ int main (int argc, char **argv)
                 "\n\t%s mensagem-txt.des -dh df01ff234abc3d4f -cbc -logh\n\n", argv[0], argv[0], argv[0], argv[0], argv[0]);
 
         free(nome_f_des);
+        free(nome_f_in);
     }
 
 	return 0;
@@ -1281,6 +1297,10 @@ void funcaoF (unsigned int *bloco_4B, tBloco6B *chave, t32UBits *bit)
 
 } // end-funcaoF (unsigned int *bloco_4B, tBloco6B *chave, t32UBits *bit)
 
+/* ------------------------------------------------------------------------------------------------ */
+/* ------------------------------------- CRIPT/DESCRI S/ LOG -------------------------------------- */
+/* ------------------------------------------------------------------------------------------------ */
+
 /**
  * Função cifra a mensagem contida em um arquivo s/log
  * Modo de operação ECB - Electronic Code Book Mode
@@ -1310,389 +1330,393 @@ void cifreECB (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
         if ((tam_bloco_lido = fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
             bloco.l |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
 
-        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
-            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
-        // end-leProximoBloco
-        
-        // ----------------------------------------------
+        if (tam_bloco_lido != 0)
+        {
 
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-		 *  60 52 44 36 28 20 12 4
-		 *  62 54 46 38 30 22 14 6
-		 *  64 56 48 40 32 24 16 8
-		 *  57 49 41 33 25 17 9  1
-		 *  59 51 43 35 27 19 11 3
-		 *  61 53 45 37 29 21 13 5
-		 *  63 55 47 39 31 23 15 7 
-         */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-	    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-	    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-	    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-	    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-	    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-	    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-	    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-	    
-	    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-	    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-	    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-	    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-	    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-	    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-	    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-	    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-	    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-	    
-	    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-	    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-	    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-	    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-	    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-	    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-	    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-	    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-	    
-	    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-	    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-	    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-	    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-	    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-	    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-	    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-	    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
+	            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
+	        // end-leProximoBloco
+	        
+	        // ----------------------------------------------
 
-	    bloco = permutacao;
-	    // end-aplicaPermutacaoInicial
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+			 *  60 52 44 36 28 20 12 4
+			 *  62 54 46 38 30 22 14 6
+			 *  64 56 48 40 32 24 16 8
+			 *  57 49 41 33 25 17 9  1
+			 *  59 51 43 35 27 19 11 3
+			 *  61 53 45 37 29 21 13 5
+			 *  63 55 47 39 31 23 15 7 
+	         */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+		    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+		    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+		    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+		    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+		    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+		    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+		    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+		    
+		    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+		    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+		    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+		    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+		    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+		    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+		    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+		    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+		    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+		    
+		    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+		    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+		    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+		    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+		    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+		    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+		    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+		    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+		    
+		    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+		    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+		    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+		    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+		    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+		    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+		    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+		    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
-        
-        /**
-         * aplicaFeistel
-         */
+		    bloco = permutacao;
+		    // end-aplicaPermutacaoInicial
 
-	    // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-   	    // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-	    bloco.r = left;
-	    bloco.l = right;
-	    // end-aplicaFeistel
+	        // ----------------------------------------------
+	        
+	        /**
+	         * aplicaFeistel
+	         */
 
-	    // ----------------------------------------------
+		    // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	   	    // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+		    bloco.r = left;
+		    bloco.l = right;
+		    // end-aplicaFeistel
 
-        /**
-    	 * aplicaPermutacaoInversa
-    	 *  40 8 48 16 56 24 64 32
-		 *  39 7 47 15 55 23 63 31
-		 *  38 6 46 14 54 22 62 30
-		 *  37 5 45 13 53 21 61 29
-		 *  36 4 44 12 52 20 60 28
-		 *  35 3 43 11 51 19 59 27
-		 *  34 2 42 10 50 18 58 26
-		 *  33 1 41 9  49 17 57 25 
-    	 */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-	    
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-	    
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-	    
-	    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-	    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-	    
-	    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-	    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-	    
-	    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-	    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-	    
-	    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-	    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-	    
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-	    
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-	    
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-	    
-	    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-	    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-	    
-	    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-	    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-	    
-	    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-	    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-	    
-	    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-	    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-	    
-	    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-	    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-	    
-	    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-	    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-	    
-	    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-	    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-	    
-	    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-	    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-	    
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-	    
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-	    
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-	    
-	    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-	    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-	    
-	    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-	    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-	    
-	    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-	    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-	    
-	    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-	    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-	    
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-	    
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-	    
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-	    
-	    bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+		    // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	    	 * aplicaPermutacaoInversa
+	    	 *  40 8 48 16 56 24 64 32
+			 *  39 7 47 15 55 23 63 31
+			 *  38 6 46 14 54 22 62 30
+			 *  37 5 45 13 53 21 61 29
+			 *  36 4 44 12 52 20 60 28
+			 *  35 3 43 11 51 19 59 27
+			 *  34 2 42 10 50 18 58 26
+			 *  33 1 41 9  49 17 57 25 
+	    	 */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+		    
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+		    
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+		    
+		    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+		    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+		    
+		    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+		    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+		    
+		    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+		    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+		    
+		    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+		    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+		    
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+		    
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+		    
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+		    
+		    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+		    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+		    
+		    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+		    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+		    
+		    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+		    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+		    
+		    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+		    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+		    
+		    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+		    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+		    
+		    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+		    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+		    
+		    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+		    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+		    
+		    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+		    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+		    
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+		    
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+		    
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+		    
+		    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+		    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+		    
+		    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+		    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+		    
+		    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+		    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+		    
+		    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+		    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+		    
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+		    
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+		    
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+		    
+		    bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
-    	fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+	        // ----------------------------------------------
+
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
+	    	fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+    	}
     }
 
 } // end-cifreECB (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
@@ -1728,408 +1752,411 @@ void decifreECB (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
         /**
     	 * leProximoBloco
     	 */
-	    fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);	    
-	    fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
-	    // end-leProximoBloco
+	    fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);
 
-	    // ----------------------------------------------
-        
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-		 *  60 52 44 36 28 20 12 4
-		 *  62 54 46 38 30 22 14 6
-		 *  64 56 48 40 32 24 16 8
-		 *  57 49 41 33 25 17 9  1
-		 *  59 51 43 35 27 19 11 3
-		 *  61 53 45 37 29 21 13 5
-		 *  63 55 47 39 31 23 15 7 
-         */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-	    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-	    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-	    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-	    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-	    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-	    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-	    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-	    
-	    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-	    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-	    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-	    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-	    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-	    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-	    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-	    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-	    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-	    
-	    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-	    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-	    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-	    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-	    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-	    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-	    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-	    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-	    
-	    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-	    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-	    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-	    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-	    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-	    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-	    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-	    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	    if (feof(f_in) == 0)
+	    {
+		    fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
+		    // end-leProximoBloco
 
-	    bloco = permutacao;
-	    // end-aplicaPermutacaoInicial
+		    // ----------------------------------------------
+	        
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+			 *  60 52 44 36 28 20 12 4
+			 *  62 54 46 38 30 22 14 6
+			 *  64 56 48 40 32 24 16 8
+			 *  57 49 41 33 25 17 9  1
+			 *  59 51 43 35 27 19 11 3
+			 *  61 53 45 37 29 21 13 5
+			 *  63 55 47 39 31 23 15 7 
+	         */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+		    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+		    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+		    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+		    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+		    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+		    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+		    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+		    
+		    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+		    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+		    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+		    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+		    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+		    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+		    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+		    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+		    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+		    
+		    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+		    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+		    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+		    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+		    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+		    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+		    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+		    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+		    
+		    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+		    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+		    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+		    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+		    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+		    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+		    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+		    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-	    // ----------------------------------------------
+		    bloco = permutacao;
+		    // end-aplicaPermutacaoInicial
 
-        /**
-    	 * aplicaFeistel
-    	 */
+		    // ----------------------------------------------
 
-	    // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-   	    // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-	    // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-	    bloco.r = left;
-	    bloco.l = right;
-	    // end-aplicaFeistel
+	        /**
+	    	 * aplicaFeistel
+	    	 */
 
-	    // ----------------------------------------------
+		    // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	   	    // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+		    // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+		    bloco.r = left;
+		    bloco.l = right;
+		    // end-aplicaFeistel
 
-        /**
-    	 * aplicaPermutacaoInversa
-    	 *  40 8 48 16 56 24 64 32
-		 *  39 7 47 15 55 23 63 31
-		 *  38 6 46 14 54 22 62 30
-		 *  37 5 45 13 53 21 61 29
-		 *  36 4 44 12 52 20 60 28
-		 *  35 3 43 11 51 19 59 27
-		 *  34 2 42 10 50 18 58 26
-		 *  33 1 41 9  49 17 57 25 
-    	 */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-	    
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-	    
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-	    
-	    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-	    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-	    
-	    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-	    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-	    
-	    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-	    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-	    
-	    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-	    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-	    
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-	    
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-	    
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-	    
-	    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-	    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-	    
-	    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-	    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-	    
-	    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-	    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-	    
-	    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-	    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-	    
-	    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-	    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-	    
-	    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-	    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-	    
-	    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-	    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-	    
-	    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-	    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-	    
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-	    
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-	    
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-	    
-	    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-	    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-	    
-	    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-	    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-	    
-	    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-	    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-	    
-	    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-	    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-	    
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-	    
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-	    
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-	    
-	    bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+		    // ----------------------------------------------
 
-	    // ----------------------------------------------
+	        /**
+	    	 * aplicaPermutacaoInversa
+	    	 *  40 8 48 16 56 24 64 32
+			 *  39 7 47 15 55 23 63 31
+			 *  38 6 46 14 54 22 62 30
+			 *  37 5 45 13 53 21 61 29
+			 *  36 4 44 12 52 20 60 28
+			 *  35 3 43 11 51 19 59 27
+			 *  34 2 42 10 50 18 58 26
+			 *  33 1 41 9  49 17 57 25 
+	    	 */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+		    
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+		    
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+		    
+		    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+		    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+		    
+		    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+		    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+		    
+		    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+		    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+		    
+		    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+		    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+		    
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+		    
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+		    
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+		    
+		    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+		    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+		    
+		    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+		    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+		    
+		    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+		    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+		    
+		    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+		    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+		    
+		    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+		    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+		    
+		    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+		    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+		    
+		    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+		    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+		    
+		    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+		    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+		    
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+		    
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+		    
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+		    
+		    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+		    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+		    
+		    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+		    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+		    
+		    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+		    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+		    
+		    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+		    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+		    
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+		    
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+		    
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+		    
+		    bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        /**
-         * escreveBlocoSaida
-         */
-        flagL = 4;
-        flagR = 4;
-        if ((bloco.l & byte1) == byte1) flagL--;
-        if ((bloco.l & byte2) == byte2) flagL--;
-        if ((bloco.l & byte3) == byte3) flagL--;
-        if ((bloco.l & byte4) == byte4) flagL--;
+		    // ----------------------------------------------
 
-        if ((bloco.r & byte1) == byte1) flagR--;
-        if ((bloco.r & byte2) == byte2) flagR--;
-        if ((bloco.r & byte3) == byte3) flagR--;
-        if ((bloco.r & byte4) == byte4) flagR--;
+	        /**
+	         * escreveBlocoSaida
+	         */
+	        flagL = 4;
+	        flagR = 4;
+	        if ((bloco.l & byte1) == byte1) flagL--;
+	        if ((bloco.l & byte2) == byte2) flagL--;
+	        if ((bloco.l & byte3) == byte3) flagL--;
+	        if ((bloco.l & byte4) == byte4) flagL--;
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, flagL, f_out);
-        fwrite(&bloco.r, tam_1byte, flagR, f_out);
-        
-        if (flagL < 4 || flagR < 4) break;
-        // end-escreveBlocoSaida
+	        if ((bloco.r & byte1) == byte1) flagR--;
+	        if ((bloco.r & byte2) == byte2) flagR--;
+	        if ((bloco.r & byte3) == byte3) flagR--;
+	        if ((bloco.r & byte4) == byte4) flagR--;
 
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, flagL, f_out);
+	        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+	        
+	        if (flagL < 4 || flagR < 4) break;
+	        // end-escreveBlocoSaida
+    	}
     }
     
 } // end-decifreECB (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
@@ -2168,399 +2195,403 @@ void cifreCBC (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
         if ((tam_bloco_lido = fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
             bloco.l |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
 
-        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
-            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
-	    // end-leProximoBloco
+        if (tam_bloco_lido != 0)
+        {
 
-	    // ----------------------------------------------
+	        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
+	            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
+		    // end-leProximoBloco
 
-	    // aplicaVI
-    	bloco.l ^= vi.l;
-    	bloco.r ^= vi.r;
+		    // ----------------------------------------------
 
-	    // ----------------------------------------------
+		    // aplicaVI
+	    	bloco.l ^= vi.l;
+	    	bloco.r ^= vi.r;
 
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-		 *  60 52 44 36 28 20 12 4
-		 *  62 54 46 38 30 22 14 6
-		 *  64 56 48 40 32 24 16 8
-		 *  57 49 41 33 25 17 9  1
-		 *  59 51 43 35 27 19 11 3
-		 *  61 53 45 37 29 21 13 5
-		 *  63 55 47 39 31 23 15 7 
-         */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-	    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-	    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-	    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-	    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-	    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-	    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-	    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-	    
-	    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-	    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-	    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-	    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-	    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-	    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-	    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-	    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-	    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-	    
-	    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-	    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-	    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-	    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-	    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-	    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-	    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-	    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-	    
-	    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-	    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-	    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-	    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-	    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-	    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-	    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-	    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+		    // ----------------------------------------------
 
-	    bloco = permutacao;
-	    // end-aplicaPermutacaoInicial
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+			 *  60 52 44 36 28 20 12 4
+			 *  62 54 46 38 30 22 14 6
+			 *  64 56 48 40 32 24 16 8
+			 *  57 49 41 33 25 17 9  1
+			 *  59 51 43 35 27 19 11 3
+			 *  61 53 45 37 29 21 13 5
+			 *  63 55 47 39 31 23 15 7 
+	         */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+		    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+		    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+		    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+		    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+		    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+		    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+		    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+		    
+		    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+		    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+		    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+		    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+		    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+		    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+		    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+		    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+		    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+		    
+		    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+		    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+		    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+		    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+		    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+		    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+		    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+		    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+		    
+		    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+		    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+		    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+		    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+		    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+		    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+		    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+		    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-	    // ----------------------------------------------
+		    bloco = permutacao;
+		    // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+		    // ----------------------------------------------
 
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-	    // ----------------------------------------------
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-    	 * aplicaPermutacaoInversa
-    	 *  40 8 48 16 56 24 64 32
-		 *  39 7 47 15 55 23 63 31
-		 *  38 6 46 14 54 22 62 30
-		 *  37 5 45 13 53 21 61 29
-		 *  36 4 44 12 52 20 60 28
-		 *  35 3 43 11 51 19 59 27
-		 *  34 2 42 10 50 18 58 26
-		 *  33 1 41 9  49 17 57 25 
-    	 */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-	    
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-	    
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-	    
-	    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-	    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-	    
-	    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-	    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-	    
-	    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-	    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-	    
-	    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-	    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-	    
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-	    
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-	    
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-	    
-	    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-	    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-	    
-	    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-	    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-	    
-	    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-	    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-	    
-	    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-	    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-	    
-	    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-	    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-	    
-	    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-	    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-	    
-	    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-	    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-	    
-	    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-	    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-	    
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-	    
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-	    
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-	    
-	    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-	    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-	    
-	    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-	    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-	    
-	    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-	    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-	    
-	    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-	    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-	    
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-	    
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-	    
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-	    
-	    bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+		    // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	    	 * aplicaPermutacaoInversa
+	    	 *  40 8 48 16 56 24 64 32
+			 *  39 7 47 15 55 23 63 31
+			 *  38 6 46 14 54 22 62 30
+			 *  37 5 45 13 53 21 61 29
+			 *  36 4 44 12 52 20 60 28
+			 *  35 3 43 11 51 19 59 27
+			 *  34 2 42 10 50 18 58 26
+			 *  33 1 41 9  49 17 57 25 
+	    	 */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+		    
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+		    
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+		    
+		    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+		    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+		    
+		    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+		    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+		    
+		    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+		    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+		    
+		    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+		    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+		    
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+		    
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+		    
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+		    
+		    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+		    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+		    
+		    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+		    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+		    
+		    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+		    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+		    
+		    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+		    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+		    
+		    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+		    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+		    
+		    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+		    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+		    
+		    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+		    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+		    
+		    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+		    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+		    
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+		    
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+		    
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+		    
+		    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+		    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+		    
+		    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+		    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+		    
+		    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+		    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+		    
+		    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+		    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+		    
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+		    
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+		    
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+		    
+		    bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        // Swap VI para proximo bloco
-	    vi.l = bloco.l;
-	    vi.r = bloco.r;
+	        // ----------------------------------------------
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
-    	fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+	        // Swap VI para proximo bloco
+		    vi.l = bloco.l;
+		    vi.r = bloco.r;
+
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
+	    	fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+    	}
     }
 
 } // end-cifreCBC (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
@@ -2602,422 +2633,426 @@ void decifreCBC (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
         /**
     	 * leProximoBloco
     	 */
-	    fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);	    
-	    fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
-	    // end-leProximoBloco
+	    fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);
 
-	    // ----------------------------------------------
+	    if (feof(f_in) == 0)
+	    {
+		    fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
+		    // end-leProximoBloco
 
-	    // armazena bloco p/ prox VI
-	    aux.l = bloco.l;
-	    aux.r = bloco.r;
+		    // ----------------------------------------------
 
-	    // ----------------------------------------------
-        
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-		 *  60 52 44 36 28 20 12 4
-		 *  62 54 46 38 30 22 14 6
-		 *  64 56 48 40 32 24 16 8
-		 *  57 49 41 33 25 17 9  1
-		 *  59 51 43 35 27 19 11 3
-		 *  61 53 45 37 29 21 13 5
-		 *  63 55 47 39 31 23 15 7 
-         */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-	    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-	    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-	    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-	    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-	    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-	    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-	    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-	    
-	    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-	    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-	    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-	    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-	    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-	    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-	    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-	    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-	    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-	    
-	    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-	    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-	    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-	    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-	    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-	    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-	    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-	    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-	    
-	    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-	    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-	    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-	    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-	    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-	    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-	    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-	    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+		    // armazena bloco p/ prox VI
+		    aux.l = bloco.l;
+		    aux.r = bloco.r;
 
-	    bloco = permutacao;
-	    // end-aplicaPermutacaoInicial
+		    // ----------------------------------------------
+	        
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+			 *  60 52 44 36 28 20 12 4
+			 *  62 54 46 38 30 22 14 6
+			 *  64 56 48 40 32 24 16 8
+			 *  57 49 41 33 25 17 9  1
+			 *  59 51 43 35 27 19 11 3
+			 *  61 53 45 37 29 21 13 5
+			 *  63 55 47 39 31 23 15 7 
+	         */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+		    if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+		    if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+		    if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+		    if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+		    if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+		    if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+		    if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+		    
+		    if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+		    if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+		    if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+		    if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+		    if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+		    if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+		    if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+		    if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+		    if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+		    
+		    if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+		    if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+		    if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+		    if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+		    if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+		    if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+		    if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+		    if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+		    
+		    if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+		    if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+		    if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+		    if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+		    if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+		    if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+		    if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+		    if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-	    // ----------------------------------------------
+		    bloco = permutacao;
+		    // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+		    // ----------------------------------------------
 
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-	    // ----------------------------------------------
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-    	 * aplicaPermutacaoInversa
-    	 *  40 8 48 16 56 24 64 32
-		 *  39 7 47 15 55 23 63 31
-		 *  38 6 46 14 54 22 62 30
-		 *  37 5 45 13 53 21 61 29
-		 *  36 4 44 12 52 20 60 28
-		 *  35 3 43 11 51 19 59 27
-		 *  34 2 42 10 50 18 58 26
-		 *  33 1 41 9  49 17 57 25 
-    	 */
-	    permutacao.l = 0x0;
-    	permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-	    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-	    
-	    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-	    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-	    
-	    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-	    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-	    
-	    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-	    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-	    
-	    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-	    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-	    
-	    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-	    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-	    
-	    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-	    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-	    
-	    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-	    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-	    
-	    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-	    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-	    
-	    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-	    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-	    
-	    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-	    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-	    
-	    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-	    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-	    
-	    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-	    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-	    
-	    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-	    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-	    
-	    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-	    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-	    
-	    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-	    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-	    
-	    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-	    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-	    
-	    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-	    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-	    
-	    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-	    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-	    
-	    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-	    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-	    
-	    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-	    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-	    
-	    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-	    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-	    
-	    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-	    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-	    
-	    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-	    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-	    
-	    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-	    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-	    
-	    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-	    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-	    
-	    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-	    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-	    
-	    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-	    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-	    
-	    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-	    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-	    
-	    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-	    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-	    
-	    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-	    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-	    
-	    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-	    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-	    
-	    bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+		    // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	    	 * aplicaPermutacaoInversa
+	    	 *  40 8 48 16 56 24 64 32
+			 *  39 7 47 15 55 23 63 31
+			 *  38 6 46 14 54 22 62 30
+			 *  37 5 45 13 53 21 61 29
+			 *  36 4 44 12 52 20 60 28
+			 *  35 3 43 11 51 19 59 27
+			 *  34 2 42 10 50 18 58 26
+			 *  33 1 41 9  49 17 57 25 
+	    	 */
+		    permutacao.l = 0x0;
+	    	permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+		    if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+		    
+		    if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+		    if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+		    
+		    if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+		    if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+		    
+		    if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+		    if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+		    
+		    if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+		    if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+		    
+		    if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+		    if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+		    
+		    if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+		    if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+		    
+		    if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+		    if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+		    
+		    if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+		    if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+		    
+		    if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+		    if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+		    
+		    if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+		    if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+		    
+		    if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+		    if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+		    
+		    if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+		    if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+		    
+		    if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+		    if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+		    
+		    if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+		    if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+		    
+		    if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+		    if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+		    
+		    if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+		    if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+		    
+		    if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+		    if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+		    
+		    if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+		    if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+		    
+		    if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+		    if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+		    
+		    if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+		    if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+		    
+		    if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+		    if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+		    
+		    if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+		    if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+		    
+		    if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+		    if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+		    
+		    if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+		    if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+		    
+		    if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+		    if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+		    
+		    if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+		    if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+		    
+		    if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+		    if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+		    
+		    if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+		    if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+		    
+		    if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+		    if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+		    
+		    if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+		    if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+		    
+		    if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+		    if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+		    
+		    bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        // aplicaVI
-	    bloco.l ^= vi.l;
-	    bloco.r ^= vi.r;
-	    // Swap VI para proximo bloco
-	    vi.l = aux.l;
-	    vi.r = aux.r;
+	        // ----------------------------------------------
 
-	    // ----------------------------------------------
+	        // aplicaVI
+		    bloco.l ^= vi.l;
+		    bloco.r ^= vi.r;
+		    // Swap VI para proximo bloco
+		    vi.l = aux.l;
+		    vi.r = aux.r;
 
-        /**
-    	 * escreveBlocoSaida
-    	 */
-        flagL = 4;
-        flagR = 4;
-        if ((bloco.l & byte1) == byte1) flagL--;
-        if ((bloco.l & byte2) == byte2) flagL--;
-        if ((bloco.l & byte3) == byte3) flagL--;
-        if ((bloco.l & byte4) == byte4) flagL--;
+		    // ----------------------------------------------
 
-        if ((bloco.r & byte1) == byte1) flagR--;
-        if ((bloco.r & byte2) == byte2) flagR--;
-        if ((bloco.r & byte3) == byte3) flagR--;
-        if ((bloco.r & byte4) == byte4) flagR--;
+	        /**
+	    	 * escreveBlocoSaida
+	    	 */
+	        flagL = 4;
+	        flagR = 4;
+	        if ((bloco.l & byte1) == byte1) flagL--;
+	        if ((bloco.l & byte2) == byte2) flagL--;
+	        if ((bloco.l & byte3) == byte3) flagL--;
+	        if ((bloco.l & byte4) == byte4) flagL--;
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, flagL, f_out);
-        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+	        if ((bloco.r & byte1) == byte1) flagR--;
+	        if ((bloco.r & byte2) == byte2) flagR--;
+	        if ((bloco.r & byte3) == byte3) flagR--;
+	        if ((bloco.r & byte4) == byte4) flagR--;
 
-        if (flagL < 4 || flagR < 4) break;
-	    // end-escreveBlocoSaida
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, flagL, f_out);
+	        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+
+	        if (flagL < 4 || flagR < 4) break;
+		    // end-escreveBlocoSaida
+    	}
     }
     
 } // end-decifreCBC (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave)
@@ -3091,524 +3126,528 @@ void cifreECBLogb (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char *
         if ((tam_bloco_lido = fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
             bloco.l |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
 
-        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
-            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
-        // end-leProximoBloco
-        
-        // ----------------------------------------------
+        if (tam_bloco_lido != 0)
+        {
 
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
+	            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
+	        // end-leProximoBloco
+	        
+	        // ----------------------------------------------
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
-        
-        /**
-         * aplicaFeistel
-         */
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %4d | ", 1);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c1, bit, f_log_des);
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 2);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c2, bit, f_log_des);
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 3);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c3, bit, f_log_des);
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 4);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c4, bit, f_log_des);
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 5);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c5, bit, f_log_des);
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 6);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c6, bit, f_log_des);
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 7);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c7, bit, f_log_des);
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 8);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c8, bit, f_log_des);
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 9);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c9, bit, f_log_des);
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 10);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c10, bit, f_log_des);
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 11);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c11, bit, f_log_des);
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 12);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c12, bit, f_log_des);
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 13);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c13, bit, f_log_des);
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 14);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c14, bit, f_log_des);
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 15);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c15, bit, f_log_des);
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 16);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c16, bit, f_log_des);
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        // ----------------------------------------------
+	        
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // ----------------------------------------------
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %4d | ", 1);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c1, bit, f_log_des);
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 2);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c2, bit, f_log_des);
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 3);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c3, bit, f_log_des);
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 4);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c4, bit, f_log_des);
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 5);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c5, bit, f_log_des);
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 6);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c6, bit, f_log_des);
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 7);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c7, bit, f_log_des);
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 8);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c8, bit, f_log_des);
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 9);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c9, bit, f_log_des);
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 10);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c10, bit, f_log_des);
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 11);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c11, bit, f_log_des);
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 12);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c12, bit, f_log_des);
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 13);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c13, bit, f_log_des);
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 14);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c14, bit, f_log_des);
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 15);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c15, bit, f_log_des);
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 16);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c16, bit, f_log_des);
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        fprintf(f_log_des, "\n|------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|--------------------------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------|\n");
+	        // ----------------------------------------------
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
-        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+	        fprintf(f_log_des, "\n|------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|--------------------------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------|\n");
+
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
+	        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+    	}
     }
 
     // Escreve no log texto final e fecha fluxo
@@ -3694,543 +3733,546 @@ void decifreECBLogb (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char
         /**
          * leProximoBloco
          */
-        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);       
-        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
-        // end-leProximoBloco
+        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);
 
-        // ----------------------------------------------
-        
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+        if (feof(f_in) == 0)
+        {
+	        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
+	        // end-leProximoBloco
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        // ----------------------------------------------
+	        
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+	        // ----------------------------------------------
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %4d | ", 1);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c16, bit, f_log_des);
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 2);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c15, bit, f_log_des);
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 3);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c14, bit, f_log_des);
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 4);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c13, bit, f_log_des);
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 5);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c12, bit, f_log_des);
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 6);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c11, bit, f_log_des);
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 7);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c10, bit, f_log_des);
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 8);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c9, bit, f_log_des);
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 9);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c8, bit, f_log_des);
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 10);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c7, bit, f_log_des);
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 11);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c6, bit, f_log_des);
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 12);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c5, bit, f_log_des);
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 13);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c4, bit, f_log_des);
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 14);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c3, bit, f_log_des);
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 15);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c2, bit, f_log_des);
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 16);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c1, bit, f_log_des);
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // ----------------------------------------------
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %4d | ", 1);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c16, bit, f_log_des);
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 2);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c15, bit, f_log_des);
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 3);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c14, bit, f_log_des);
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 4);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c13, bit, f_log_des);
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 5);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c12, bit, f_log_des);
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 6);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c11, bit, f_log_des);
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 7);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c10, bit, f_log_des);
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 8);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c9, bit, f_log_des);
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 9);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c8, bit, f_log_des);
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 10);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c7, bit, f_log_des);
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 11);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c6, bit, f_log_des);
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 12);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c5, bit, f_log_des);
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 13);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c4, bit, f_log_des);
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 14);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c3, bit, f_log_des);
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 15);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c2, bit, f_log_des);
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 16);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c1, bit, f_log_des);
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        fprintf(f_log_des, "\n|------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|--------------------------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------|\n");
+	        // ----------------------------------------------
 
-        /**
-         * escreveBlocoSaida
-         */
-        flagL = 4;
-        flagR = 4;
-        if ((bloco.l & byte1) == byte1) flagL--;
-        if ((bloco.l & byte2) == byte2) flagL--;
-        if ((bloco.l & byte3) == byte3) flagL--;
-        if ((bloco.l & byte4) == byte4) flagL--;
+	        fprintf(f_log_des, "\n|------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|--------------------------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------|\n");
 
-        if ((bloco.r & byte1) == byte1) flagR--;
-        if ((bloco.r & byte2) == byte2) flagR--;
-        if ((bloco.r & byte3) == byte3) flagR--;
-        if ((bloco.r & byte4) == byte4) flagR--;
+	        /**
+	         * escreveBlocoSaida
+	         */
+	        flagL = 4;
+	        flagR = 4;
+	        if ((bloco.l & byte1) == byte1) flagL--;
+	        if ((bloco.l & byte2) == byte2) flagL--;
+	        if ((bloco.l & byte3) == byte3) flagL--;
+	        if ((bloco.l & byte4) == byte4) flagL--;
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, flagL, f_out);
-        fwrite(&bloco.r, tam_1byte, flagR, f_out);
-        
-        if (flagL < 4 || flagR < 4) break;
-        // end-escreveBlocoSaida
+	        if ((bloco.r & byte1) == byte1) flagR--;
+	        if ((bloco.r & byte2) == byte2) flagR--;
+	        if ((bloco.r & byte3) == byte3) flagR--;
+	        if ((bloco.r & byte4) == byte4) flagR--;
 
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, flagL, f_out);
+	        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+	        
+	        if (flagL < 4 || flagR < 4) break;
+	        // end-escreveBlocoSaida
+    	}
     }
 
     // Escreve no log texto final e fecha fluxo
@@ -4319,534 +4361,538 @@ void cifreCBCLogb (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char *
         if ((tam_bloco_lido = fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
             bloco.l |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
 
-        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
-            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
-        // end-leProximoBloco
+        if (tam_bloco_lido != 0)
+        {
 
-        // ----------------------------------------------
+	        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
+	            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
+	        // end-leProximoBloco
 
-        // aplicaVI
-        bloco.l ^= vi.l;
-        bloco.r ^= vi.r;
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        // aplicaVI
+	        bloco.l ^= vi.l;
+	        bloco.r ^= vi.r;
 
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        // ----------------------------------------------
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+	        // ----------------------------------------------
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %4d | ", 1);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c1, bit, f_log_des);
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 2);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c2, bit, f_log_des);
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 3);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c3, bit, f_log_des);
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 4);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c4, bit, f_log_des);
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 5);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c5, bit, f_log_des);
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 6);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c6, bit, f_log_des);
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 7);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c7, bit, f_log_des);
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 8);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c8, bit, f_log_des);
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 9);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c9, bit, f_log_des);
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 10);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c10, bit, f_log_des);
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 11);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c11, bit, f_log_des);
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 12);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c12, bit, f_log_des);
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 13);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c13, bit, f_log_des);
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 14);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c14, bit, f_log_des);
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 15);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c15, bit, f_log_des);
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 16);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c16, bit, f_log_des);
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // ----------------------------------------------
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %4d | ", 1);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c1, bit, f_log_des);
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 2);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c2, bit, f_log_des);
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 3);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c3, bit, f_log_des);
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 4);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c4, bit, f_log_des);
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 5);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c5, bit, f_log_des);
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 6);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c6, bit, f_log_des);
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 7);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c7, bit, f_log_des);
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 8);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c8, bit, f_log_des);
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 9);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c9, bit, f_log_des);
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 10);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c10, bit, f_log_des);
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 11);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c11, bit, f_log_des);
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 12);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c12, bit, f_log_des);
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 13);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c13, bit, f_log_des);
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 14);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c14, bit, f_log_des);
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 15);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c15, bit, f_log_des);
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 16);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c16, bit, f_log_des);
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        fprintf(f_log_des, "\n|------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|--------------------------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------|\n");
+	        // ----------------------------------------------
 
-        // Swap VI para proximo bloco
-        vi.l = bloco.l;
-        vi.r = bloco.r;
+	        fprintf(f_log_des, "\n|------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|--------------------------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------|\n");
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
-        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+	        // Swap VI para proximo bloco
+	        vi.l = bloco.l;
+	        vi.r = bloco.r;
+
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
+	        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+    	}
     }
 
     // Escreve no log texto final e fecha fluxo
@@ -4938,557 +4984,561 @@ void decifreCBCLogb (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char
         /**
          * leProximoBloco
          */
-        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);       
-        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
-        // end-leProximoBloco
+        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);
 
-        // ----------------------------------------------
+        if (feof(f_in) == 0)
+        {
+	        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
+	        // end-leProximoBloco
 
-        // armazena bloco p/ prox VI
-        aux.l = bloco.l;
-        aux.r = bloco.r;
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
-        
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        // armazena bloco p/ prox VI
+	        aux.l = bloco.l;
+	        aux.r = bloco.r;
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        // ----------------------------------------------
+	        
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+	        // ----------------------------------------------
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %4d | ", 1);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c16, bit, f_log_des);
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 2);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c15, bit, f_log_des);
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 3);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c14, bit, f_log_des);
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 4);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c13, bit, f_log_des);
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 5);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c12, bit, f_log_des);
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 6);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c11, bit, f_log_des);
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 7);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c10, bit, f_log_des);
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 8);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c9, bit, f_log_des);
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 9);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c8, bit, f_log_des);
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 10);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c7, bit, f_log_des);
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 11);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c6, bit, f_log_des);
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 12);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c5, bit, f_log_des);
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 13);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c4, bit, f_log_des);
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 14);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c3, bit, f_log_des);
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 15);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c2, bit, f_log_des);
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // Escreve no arquivo log
-        fprintf(f_log_des, "\n| %4d | ", 16);
-        fImprima4BBin(bloco.l, bit, f_log_des);
-        fImprima4BBin(bloco.r, bit, f_log_des);
-        fImprima6BBin(&chave->c1, bit, f_log_des);
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // log
-        fImprima4BBin(fun, bit, f_log_des);
-        fImprima4BBin(right, bit, f_log_des);
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // ----------------------------------------------
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %4d | ", 1);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c16, bit, f_log_des);
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 2);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c15, bit, f_log_des);
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 3);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c14, bit, f_log_des);
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 4);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c13, bit, f_log_des);
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 5);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c12, bit, f_log_des);
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 6);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c11, bit, f_log_des);
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 7);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c10, bit, f_log_des);
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 8);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c9, bit, f_log_des);
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 9);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c8, bit, f_log_des);
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 10);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c7, bit, f_log_des);
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 11);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c6, bit, f_log_des);
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 12);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c5, bit, f_log_des);
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 13);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c4, bit, f_log_des);
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 14);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c3, bit, f_log_des);
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 15);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c2, bit, f_log_des);
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "\n| %4d | ", 16);
+	        fImprima4BBin(bloco.l, bit, f_log_des);
+	        fImprima4BBin(bloco.r, bit, f_log_des);
+	        fImprima6BBin(&chave->c1, bit, f_log_des);
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // log
+	        fImprima4BBin(fun, bit, f_log_des);
+	        fImprima4BBin(right, bit, f_log_des);
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        // aplicaVI
-        bloco.l ^= vi.l;
-        bloco.r ^= vi.r;
-        // Swap VI para proximo bloco
-        vi.l = aux.l;
-        vi.r = aux.r;
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        // aplicaVI
+	        bloco.l ^= vi.l;
+	        bloco.r ^= vi.r;
+	        // Swap VI para proximo bloco
+	        vi.l = aux.l;
+	        vi.r = aux.r;
 
-        fprintf(f_log_des, "\n|------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|--------------------------------------------------");
-        fprintf(f_log_des, "|----------------------------------");
-        fprintf(f_log_des, "|----------------------------------|\n");
+	        // ----------------------------------------------
 
-        /**
-         * escreveBlocoSaida
-         */
-        flagL = 4;
-        flagR = 4;
-        if ((bloco.l & byte1) == byte1) flagL--;
-        if ((bloco.l & byte2) == byte2) flagL--;
-        if ((bloco.l & byte3) == byte3) flagL--;
-        if ((bloco.l & byte4) == byte4) flagL--;
+	        fprintf(f_log_des, "\n|------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|--------------------------------------------------");
+	        fprintf(f_log_des, "|----------------------------------");
+	        fprintf(f_log_des, "|----------------------------------|\n");
 
-        if ((bloco.r & byte1) == byte1) flagR--;
-        if ((bloco.r & byte2) == byte2) flagR--;
-        if ((bloco.r & byte3) == byte3) flagR--;
-        if ((bloco.r & byte4) == byte4) flagR--;
+	        /**
+	         * escreveBlocoSaida
+	         */
+	        flagL = 4;
+	        flagR = 4;
+	        if ((bloco.l & byte1) == byte1) flagL--;
+	        if ((bloco.l & byte2) == byte2) flagL--;
+	        if ((bloco.l & byte3) == byte3) flagL--;
+	        if ((bloco.l & byte4) == byte4) flagL--;
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, flagL, f_out);
-        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+	        if ((bloco.r & byte1) == byte1) flagR--;
+	        if ((bloco.r & byte2) == byte2) flagR--;
+	        if ((bloco.r & byte3) == byte3) flagR--;
+	        if ((bloco.r & byte4) == byte4) flagR--;
 
-        if (flagL < 4 || flagR < 4) break;
-        // end-escreveBlocoSaida
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, flagL, f_out);
+	        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+
+	        if (flagL < 4 || flagR < 4) break;
+	        // end-escreveBlocoSaida
+    	}
     }
 
     // Escreve no log texto final e fecha fluxo
@@ -5529,6 +5579,7 @@ void decifreCBCLogb (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char
 void cifreECBLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char *n_chave)
 {
     // Variáveis
+    tBloco8B aux; // p/ teste de bigendian
     tBloco8B bloco;
     tBloco8B permutacao;
     size_t tam_bloco_lido;
@@ -5539,9 +5590,9 @@ void cifreECBLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char *
     unsigned int left;
     unsigned int right;
     int msb = MSB;
-    int i = 0;
+    int i = 1;
     char *nome_f_des = malloc((tam_chave + 21) * sizeof(char) + 1);
-    
+
     if (nome_f_des == NULL)
     {
         printf("Erro ao alocar memória p/ arquivo saída DES.\n");
@@ -5574,401 +5625,437 @@ void cifreECBLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char *
         if ((tam_bloco_lido = fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
             bloco.l |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
 
-        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
-            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
-        // end-leProximoBloco
+        if (tam_bloco_lido != 0)
+        {
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %6d | ", i);
-        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
+	        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
+	            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
+	        // end-leProximoBloco
 
-        // ----------------------------------------------
+	        // aux.l = 0x0;
+	        // aux.r = 0x0;
 
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        // aux.l |= ((bloco.l & 0xff) << 24);
+	        // aux.l |= ((bloco.l & 0xff00) << 8);
+	        // aux.l |= ((bloco.l & 0xff0000) >> 8);
+	        // aux.l |= ((bloco.l & 0xff000000) >> 24);
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        // aux.r |= ((bloco.r & 0xff) << 24);
+	        // aux.r |= ((bloco.r & 0xff00) << 8);
+	        // aux.r |= ((bloco.r & 0xff0000) >> 8);
+	        // aux.r |= ((bloco.r & 0xff000000) >> 24);
 
-        // ----------------------------------------------
-        
-        /**
-         * aplicaFeistel
-         */
+	        // bloco.l = aux.l;
+	        // bloco.r = aux.r;
 
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %6d | ", i);
+	        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
 
-        // ----------------------------------------------
+	        // ----------------------------------------------
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
-        fprintf(f_log_des, "\n|--------");
-        fprintf(f_log_des, "|------------------");
-        fprintf(f_log_des, "|------------------|\n");
+	        // ----------------------------------------------
+	        
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
-        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        i++;
+	        // ----------------------------------------------
+
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
+
+	        // ----------------------------------------------
+
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
+	        fprintf(f_log_des, "\n|--------");
+	        fprintf(f_log_des, "|------------------");
+	        fprintf(f_log_des, "|------------------|\n");
+
+	        // aux.l = 0x0;
+	        // aux.r = 0x0;
+
+	        // aux.l |= ((bloco.l & 0xff) << 24);
+	        // aux.l |= ((bloco.l & 0xff00) << 8);
+	        // aux.l |= ((bloco.l & 0xff0000) >> 8);
+	        // aux.l |= ((bloco.l & 0xff000000) >> 24);
+
+	        // aux.r |= ((bloco.r & 0xff) << 24);
+	        // aux.r |= ((bloco.r & 0xff00) << 8);
+	        // aux.r |= ((bloco.r & 0xff0000) >> 8);
+	        // aux.r |= ((bloco.r & 0xff000000) >> 24);
+
+	        // bloco.l = aux.l;
+	        // bloco.r = aux.r;
+
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
+	        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+
+	        i++;
+	    }
     }
 
     // Escreve no log texto final e fecha fluxo
@@ -6005,7 +6092,7 @@ void decifreECBLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char
     unsigned int byte4 = 0xff;
     unsigned int flagL, flagR;
     int msb = MSB;
-    int i = 0;
+    int i = 1;
     char *nome_f_des = malloc((tam_chave + 24) * sizeof(char) + 1);
     
     if (nome_f_des == NULL)
@@ -6037,420 +6124,424 @@ void decifreECBLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char
         /**
          * leProximoBloco
          */
-        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);       
-        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
-        // end-leProximoBloco
+        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %6d | ", i);
-        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
+        if (feof(f_in) == 0)
+        {
+	        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
+	        // end-leProximoBloco
 
-        // ----------------------------------------------
-        
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %6d | ", i);
+	        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        // ----------------------------------------------
+	        
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+	        // ----------------------------------------------
 
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // ----------------------------------------------
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
-        fprintf(f_log_des, "\n|--------");
-        fprintf(f_log_des, "|------------------");
-        fprintf(f_log_des, "|------------------|\n");
+	        // ----------------------------------------------
 
-        /**
-         * escreveBlocoSaida
-         */
-        flagL = 4;
-        flagR = 4;
-        if ((bloco.l & byte1) == byte1) flagL--;
-        if ((bloco.l & byte2) == byte2) flagL--;
-        if ((bloco.l & byte3) == byte3) flagL--;
-        if ((bloco.l & byte4) == byte4) flagL--;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
+	        fprintf(f_log_des, "\n|--------");
+	        fprintf(f_log_des, "|------------------");
+	        fprintf(f_log_des, "|------------------|\n");
 
-        if ((bloco.r & byte1) == byte1) flagR--;
-        if ((bloco.r & byte2) == byte2) flagR--;
-        if ((bloco.r & byte3) == byte3) flagR--;
-        if ((bloco.r & byte4) == byte4) flagR--;
+	        /**
+	         * escreveBlocoSaida
+	         */
+	        flagL = 4;
+	        flagR = 4;
+	        if ((bloco.l & byte1) == byte1) flagL--;
+	        if ((bloco.l & byte2) == byte2) flagL--;
+	        if ((bloco.l & byte3) == byte3) flagL--;
+	        if ((bloco.l & byte4) == byte4) flagL--;
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, flagL, f_out);
-        fwrite(&bloco.r, tam_1byte, flagR, f_out);
-        
-        if (flagL < 4 || flagR < 4) break;
-        // end-escreveBlocoSaida
+	        if ((bloco.r & byte1) == byte1) flagR--;
+	        if ((bloco.r & byte2) == byte2) flagR--;
+	        if ((bloco.r & byte3) == byte3) flagR--;
+	        if ((bloco.r & byte4) == byte4) flagR--;
 
-        i++;
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, flagL, f_out);
+	        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+	        
+	        if (flagL < 4 || flagR < 4) break;
+	        // end-escreveBlocoSaida
 
+	        i++;
+
+	    }
     }
 
     // Escreve no log texto final e fecha fluxo
@@ -6483,7 +6574,7 @@ void cifreCBCLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char *
     unsigned int left;
     unsigned int right;
     int msb = MSB;
-    int i = 0;
+    int i = 1;
     char *nome_f_des = malloc((tam_chave + 21) * sizeof(char) + 1);
     
     if (nome_f_des == NULL)
@@ -6522,411 +6613,415 @@ void cifreCBCLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char *
         if ((tam_bloco_lido = fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
             bloco.l |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
 
-        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
-            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
-        // end-leProximoBloco
+        if (tam_bloco_lido != 0)
+        {
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %6d | ", i);
-        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
+	        if ((tam_bloco_lido = fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in)) != tam_meio_bloco)
+	            bloco.r |= (msb >> (((tam_meio_bloco - tam_bloco_lido) << 3) - 1));
+	        // end-leProximoBloco
 
-        // ----------------------------------------------
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %6d | ", i);
+	        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
 
-        // aplicaVI
-        bloco.l ^= vi.l;
-        bloco.r ^= vi.r;
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        // aplicaVI
+	        bloco.l ^= vi.l;
+	        bloco.r ^= vi.r;
 
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        // ----------------------------------------------
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+	        // ----------------------------------------------
 
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // ----------------------------------------------
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
-        fprintf(f_log_des, "\n|--------");
-        fprintf(f_log_des, "|------------------");
-        fprintf(f_log_des, "|------------------|\n");
+	        // ----------------------------------------------
 
-        // Swap VI para proximo bloco
-        vi.l = bloco.l;
-        vi.r = bloco.r;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
+	        fprintf(f_log_des, "\n|--------");
+	        fprintf(f_log_des, "|------------------");
+	        fprintf(f_log_des, "|------------------|\n");
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
-        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+	        // Swap VI para proximo bloco
+	        vi.l = bloco.l;
+	        vi.r = bloco.r;
 
-        i++;
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, tam_meio_bloco, f_out);
+	        fwrite(&bloco.r, tam_1byte, tam_meio_bloco, f_out);
+
+	        i++;
+	    }
     }
 
     // Escreve no log texto final e fecha fluxo
@@ -6965,7 +7060,7 @@ void decifreCBCLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char
     unsigned int byte4 = 0xff;
     unsigned int flagL, flagR;
     int msb = MSB;
-    int i = 0;
+    int i = 1;
     char *nome_f_des = malloc((tam_chave + 24) * sizeof(char) + 1);
     
     if (nome_f_des == NULL)
@@ -7001,435 +7096,438 @@ void decifreCBCLogh (t32UBits *bit, FILE *f_in, FILE *f_out, tChave *chave, char
         /**
          * leProximoBloco
          */
-        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);       
-        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
-        // end-leProximoBloco
+        fread(&bloco.l, tam_1byte, tam_meio_bloco, f_in);
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "| %6d | ", i);
-        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
+        if (feof(f_in) == 0)
+        {
+	        fread(&bloco.r, tam_1byte, tam_meio_bloco, f_in);
+	        // end-leProximoBloco
 
-        // ----------------------------------------------
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "| %6d | ", i);
+	        fprintf(f_log_des, "%8x%8x | ", bloco.l, bloco.r);
 
-        // armazena bloco p/ prox VI
-        aux.l = bloco.l;
-        aux.r = bloco.r;
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
-        
-        /**
-         * aplicaPermutacaoInicial
-         *  58 50 42 34 26 18 10 2
-         *  60 52 44 36 28 20 12 4
-         *  62 54 46 38 30 22 14 6
-         *  64 56 48 40 32 24 16 8
-         *  57 49 41 33 25 17 9  1
-         *  59 51 43 35 27 19 11 3
-         *  61 53 45 37 29 21 13 5
-         *  63 55 47 39 31 23 15 7 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
-        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
-        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
-        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
-        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
-        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
-        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
-        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
-        
-        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
-        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
-        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
-        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
-        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
-        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
-        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
-        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
-        
-        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
-        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
-        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
-        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
-        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
-        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
-        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
-        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
-        
-        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
-        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
-        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
-        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
-        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
-        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
-        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
-        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
+	        // armazena bloco p/ prox VI
+	        aux.l = bloco.l;
+	        aux.r = bloco.r;
 
-        bloco = permutacao;
-        // end-aplicaPermutacaoInicial
+	        // ----------------------------------------------
+	        
+	        /**
+	         * aplicaPermutacaoInicial
+	         *  58 50 42 34 26 18 10 2
+	         *  60 52 44 36 28 20 12 4
+	         *  62 54 46 38 30 22 14 6
+	         *  64 56 48 40 32 24 16 8
+	         *  57 49 41 33 25 17 9  1
+	         *  59 51 43 35 27 19 11 3
+	         *  61 53 45 37 29 21 13 5
+	         *  63 55 47 39 31 23 15 7 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b26) permutacao.l ^= bit->b01; // 58
+	        if (bloco.r & bit->b18) permutacao.l ^= bit->b02; // 50
+	        if (bloco.r & bit->b10) permutacao.l ^= bit->b03; // 42
+	        if (bloco.r & bit->b02) permutacao.l ^= bit->b04; // 34
+	        if (bloco.l & bit->b26) permutacao.l ^= bit->b05; // 26
+	        if (bloco.l & bit->b18) permutacao.l ^= bit->b06; // 18
+	        if (bloco.l & bit->b10) permutacao.l ^= bit->b07; // 10
+	        if (bloco.l & bit->b02) permutacao.l ^= bit->b08; // 2
+	        
+	        if (bloco.r & bit->b28) permutacao.l ^= bit->b09; // 60
+	        if (bloco.r & bit->b20) permutacao.l ^= bit->b10; // 52
+	        if (bloco.r & bit->b12) permutacao.l ^= bit->b11; // 44
+	        if (bloco.r & bit->b04) permutacao.l ^= bit->b12; // 36
+	        if (bloco.l & bit->b28) permutacao.l ^= bit->b13; // 28
+	        if (bloco.l & bit->b20) permutacao.l ^= bit->b14; // 20
+	        if (bloco.l & bit->b12) permutacao.l ^= bit->b15; // 12
+	        if (bloco.l & bit->b04) permutacao.l ^= bit->b16; // 4
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b17; // 62
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b18; // 54
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b20; // 38
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b21; // 30
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b23; // 14
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b24; // 6
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b25; // 64
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b26; // 56
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b27; // 48
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b28; // 40
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b29; // 32
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b30; // 24
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b31; // 16
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b32; // 8
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b01; // 57
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b02; // 49
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b03; // 41
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b04; // 33
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b05; // 25
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b06; // 17
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b07; // 9
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b08; // 1
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b09; // 59
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b10; // 51
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b12; // 35
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b13; // 27
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b15; // 11
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b16; // 3
+	        
+	        if (bloco.r & bit->b29) permutacao.r ^= bit->b17; // 61
+	        if (bloco.r & bit->b21) permutacao.r ^= bit->b18; // 53
+	        if (bloco.r & bit->b13) permutacao.r ^= bit->b19; // 45
+	        if (bloco.r & bit->b05) permutacao.r ^= bit->b20; // 37
+	        if (bloco.l & bit->b29) permutacao.r ^= bit->b21; // 29
+	        if (bloco.l & bit->b21) permutacao.r ^= bit->b22; // 21
+	        if (bloco.l & bit->b13) permutacao.r ^= bit->b23; // 13
+	        if (bloco.l & bit->b05) permutacao.r ^= bit->b24; // 5
+	        
+	        if (bloco.r & bit->b31) permutacao.r ^= bit->b25; // 63
+	        if (bloco.r & bit->b23) permutacao.r ^= bit->b26; // 55
+	        if (bloco.r & bit->b15) permutacao.r ^= bit->b27; // 47
+	        if (bloco.r & bit->b07) permutacao.r ^= bit->b28; // 39
+	        if (bloco.l & bit->b31) permutacao.r ^= bit->b29; // 31
+	        if (bloco.l & bit->b23) permutacao.r ^= bit->b30; // 23
+	        if (bloco.l & bit->b15) permutacao.r ^= bit->b31; // 15
+	        if (bloco.l & bit->b07) permutacao.r ^= bit->b32; // 7
 
-        // ----------------------------------------------
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInicial
 
-        /**
-         * aplicaFeistel
-         */
+	        // ----------------------------------------------
 
-        // ----------------- ROUND 01 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c16, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 02 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c15, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 03 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c14, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 04 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c13, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 05 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c12, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 06 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c11, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 07 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c10, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 08 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c9, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 09 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c8, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 10 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c7, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 11 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c6, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 12 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c5, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 13 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c4, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 14 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c3, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 15 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c2, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        //Swap para próximo round
-        bloco.r = right;
-        bloco.l = left;
-        // ----------------- ROUND 16 -------------------
-        // Aplica função F
-        fun = bloco.r;
-        funcaoF(&fun, &chave->c1, bit);
-        // XOR Li
-        right = fun ^ bloco.l;
-        left = bloco.r;
-        // Swap para saida
-        bloco.r = left;
-        bloco.l = right;
-        // end-aplicaFeistel
+	        /**
+	         * aplicaFeistel
+	         */
 
-        // ----------------------------------------------
+	        // ----------------- ROUND 01 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c16, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 02 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c15, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 03 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c14, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 04 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c13, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 05 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c12, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 06 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c11, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 07 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c10, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 08 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c9, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 09 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c8, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 10 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c7, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 11 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c6, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 12 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c5, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 13 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c4, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 14 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c3, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 15 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c2, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        //Swap para próximo round
+	        bloco.r = right;
+	        bloco.l = left;
+	        // ----------------- ROUND 16 -------------------
+	        // Aplica função F
+	        fun = bloco.r;
+	        funcaoF(&fun, &chave->c1, bit);
+	        // XOR Li
+	        right = fun ^ bloco.l;
+	        left = bloco.r;
+	        // Swap para saida
+	        bloco.r = left;
+	        bloco.l = right;
+	        // end-aplicaFeistel
 
-        /**
-         * aplicaPermutacaoInversa
-         *  40 8 48 16 56 24 64 32
-         *  39 7 47 15 55 23 63 31
-         *  38 6 46 14 54 22 62 30
-         *  37 5 45 13 53 21 61 29
-         *  36 4 44 12 52 20 60 28
-         *  35 3 43 11 51 19 59 27
-         *  34 2 42 10 50 18 58 26
-         *  33 1 41 9  49 17 57 25 
-         */
-        permutacao.l = 0x0;
-        permutacao.r = 0x0;
-        
-        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
-        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
-        
-        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
-        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
-        
-        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
-        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
-        
-        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
-        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
-        
-        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
-        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
-        
-        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
-        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
-        
-        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
-        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
-        
-        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
-        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
-        
-        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
-        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
-        
-        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
-        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
-        
-        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
-        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
-        
-        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
-        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
-        
-        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
-        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
-        
-        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
-        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
-        
-        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
-        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
-        
-        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
-        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
-        
-        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
-        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
-        
-        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
-        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
-        
-        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
-        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
-        
-        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
-        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
-        
-        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
-        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
-        
-        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
-        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
-        
-        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
-        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
-        
-        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
-        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
-        
-        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
-        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
-        
-        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
-        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
-        
-        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
-        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
-        
-        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
-        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
-        
-        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
-        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
-        
-        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
-        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
-        
-        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
-        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
-        
-        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
-        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
-        
-        bloco = permutacao;
-        // end-aplicaPermutacaoInversa
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        /**
+	         * aplicaPermutacaoInversa
+	         *  40 8 48 16 56 24 64 32
+	         *  39 7 47 15 55 23 63 31
+	         *  38 6 46 14 54 22 62 30
+	         *  37 5 45 13 53 21 61 29
+	         *  36 4 44 12 52 20 60 28
+	         *  35 3 43 11 51 19 59 27
+	         *  34 2 42 10 50 18 58 26
+	         *  33 1 41 9  49 17 57 25 
+	         */
+	        permutacao.l = 0x0;
+	        permutacao.r = 0x0;
+	        
+	        if (bloco.r & bit->b08) permutacao.l ^= bit->b01; // 40
+	        if (bloco.l & bit->b08) permutacao.l ^= bit->b02; // 8
+	        
+	        if (bloco.r & bit->b16) permutacao.l ^= bit->b03; // 48
+	        if (bloco.l & bit->b16) permutacao.l ^= bit->b04; // 16
+	        
+	        if (bloco.r & bit->b24) permutacao.l ^= bit->b05; // 56
+	        if (bloco.l & bit->b24) permutacao.l ^= bit->b06; // 24
+	        
+	        if (bloco.r & bit->b32) permutacao.l ^= bit->b07; // 64
+	        if (bloco.l & bit->b32) permutacao.l ^= bit->b08; // 32
+	        
+	        if (bloco.r & bit->b07) permutacao.l ^= bit->b09; // 39
+	        if (bloco.l & bit->b07) permutacao.l ^= bit->b10; // 7
+	        
+	        if (bloco.r & bit->b15) permutacao.l ^= bit->b11; // 47
+	        if (bloco.l & bit->b15) permutacao.l ^= bit->b12; // 15
+	        
+	        if (bloco.r & bit->b23) permutacao.l ^= bit->b13; // 55
+	        if (bloco.l & bit->b23) permutacao.l ^= bit->b14; // 23
+	        
+	        if (bloco.r & bit->b31) permutacao.l ^= bit->b15; // 63
+	        if (bloco.l & bit->b31) permutacao.l ^= bit->b16; // 31
+	        
+	        if (bloco.r & bit->b06) permutacao.l ^= bit->b17; // 38
+	        if (bloco.l & bit->b06) permutacao.l ^= bit->b18; // 6
+	        
+	        if (bloco.r & bit->b14) permutacao.l ^= bit->b19; // 46
+	        if (bloco.l & bit->b14) permutacao.l ^= bit->b20; // 14
+	        
+	        if (bloco.r & bit->b22) permutacao.l ^= bit->b21; // 54
+	        if (bloco.l & bit->b22) permutacao.l ^= bit->b22; // 22
+	        
+	        if (bloco.r & bit->b30) permutacao.l ^= bit->b23; // 62
+	        if (bloco.l & bit->b30) permutacao.l ^= bit->b24; // 30
+	        
+	        if (bloco.r & bit->b05) permutacao.l ^= bit->b25; // 37
+	        if (bloco.l & bit->b05) permutacao.l ^= bit->b26; // 5
+	        
+	        if (bloco.r & bit->b13) permutacao.l ^= bit->b27; // 45
+	        if (bloco.l & bit->b13) permutacao.l ^= bit->b28; // 13
+	        
+	        if (bloco.r & bit->b21) permutacao.l ^= bit->b29; // 53
+	        if (bloco.l & bit->b21) permutacao.l ^= bit->b30; // 21
+	        
+	        if (bloco.r & bit->b29) permutacao.l ^= bit->b31; // 61
+	        if (bloco.l & bit->b29) permutacao.l ^= bit->b32; // 29
+	        
+	        if (bloco.r & bit->b04) permutacao.r ^= bit->b01; // 36
+	        if (bloco.l & bit->b04) permutacao.r ^= bit->b02; // 4
+	        
+	        if (bloco.r & bit->b12) permutacao.r ^= bit->b03; // 44
+	        if (bloco.l & bit->b12) permutacao.r ^= bit->b04; // 12
+	        
+	        if (bloco.r & bit->b20) permutacao.r ^= bit->b05; // 52
+	        if (bloco.l & bit->b20) permutacao.r ^= bit->b06; // 20
+	        
+	        if (bloco.r & bit->b28) permutacao.r ^= bit->b07; // 60
+	        if (bloco.l & bit->b28) permutacao.r ^= bit->b08; // 28
+	        
+	        if (bloco.r & bit->b03) permutacao.r ^= bit->b09; // 35
+	        if (bloco.l & bit->b03) permutacao.r ^= bit->b10; // 3
+	        
+	        if (bloco.r & bit->b11) permutacao.r ^= bit->b11; // 43
+	        if (bloco.l & bit->b11) permutacao.r ^= bit->b12; // 11
+	        
+	        if (bloco.r & bit->b19) permutacao.r ^= bit->b13; // 51
+	        if (bloco.l & bit->b19) permutacao.r ^= bit->b14; // 19
+	        
+	        if (bloco.r & bit->b27) permutacao.r ^= bit->b15; // 59
+	        if (bloco.l & bit->b27) permutacao.r ^= bit->b16; // 27
+	        
+	        if (bloco.r & bit->b02) permutacao.r ^= bit->b17; // 34
+	        if (bloco.l & bit->b02) permutacao.r ^= bit->b18; // 2
+	        
+	        if (bloco.r & bit->b10) permutacao.r ^= bit->b19; // 42
+	        if (bloco.l & bit->b10) permutacao.r ^= bit->b20; // 10
+	        
+	        if (bloco.r & bit->b18) permutacao.r ^= bit->b21; // 50
+	        if (bloco.l & bit->b18) permutacao.r ^= bit->b22; // 18
+	        
+	        if (bloco.r & bit->b26) permutacao.r ^= bit->b23; // 58
+	        if (bloco.l & bit->b26) permutacao.r ^= bit->b24; // 26
+	        
+	        if (bloco.r & bit->b01) permutacao.r ^= bit->b25; // 33
+	        if (bloco.l & bit->b01) permutacao.r ^= bit->b26; // 1
+	        
+	        if (bloco.r & bit->b09) permutacao.r ^= bit->b27; // 41
+	        if (bloco.l & bit->b09) permutacao.r ^= bit->b28; // 9
+	        
+	        if (bloco.r & bit->b17) permutacao.r ^= bit->b29; // 49
+	        if (bloco.l & bit->b17) permutacao.r ^= bit->b30; // 17
+	        
+	        if (bloco.r & bit->b25) permutacao.r ^= bit->b31; // 57
+	        if (bloco.l & bit->b25) permutacao.r ^= bit->b32; // 25
+	        
+	        bloco = permutacao;
+	        // end-aplicaPermutacaoInversa
 
-        // aplicaVI
-        bloco.l ^= vi.l;
-        bloco.r ^= vi.r;
-        // Swap VI para proximo bloco
-        vi.l = aux.l;
-        vi.r = aux.r;
+	        // ----------------------------------------------
 
-        // ----------------------------------------------
+	        // aplicaVI
+	        bloco.l ^= vi.l;
+	        bloco.r ^= vi.r;
+	        // Swap VI para proximo bloco
+	        vi.l = aux.l;
+	        vi.r = aux.r;
 
-        // Escreve no arquivo log
-        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
-        fprintf(f_log_des, "\n|--------");
-        fprintf(f_log_des, "|------------------");
-        fprintf(f_log_des, "|------------------|\n");
+	        // ----------------------------------------------
 
-        /**
-         * escreveBlocoSaida
-         */
-        flagL = 4;
-        flagR = 4;
-        if ((bloco.l & byte1) == byte1) flagL--;
-        if ((bloco.l & byte2) == byte2) flagL--;
-        if ((bloco.l & byte3) == byte3) flagL--;
-        if ((bloco.l & byte4) == byte4) flagL--;
+	        // Escreve no arquivo log
+	        fprintf(f_log_des, "%8x%8x |", bloco.l, bloco.r);
+	        fprintf(f_log_des, "\n|--------");
+	        fprintf(f_log_des, "|------------------");
+	        fprintf(f_log_des, "|------------------|\n");
 
-        if ((bloco.r & byte1) == byte1) flagR--;
-        if ((bloco.r & byte2) == byte2) flagR--;
-        if ((bloco.r & byte3) == byte3) flagR--;
-        if ((bloco.r & byte4) == byte4) flagR--;
+	        /**
+	         * escreveBlocoSaida
+	         */
+	        flagL = 4;
+	        flagR = 4;
+	        if ((bloco.l & byte1) == byte1) flagL--;
+	        if ((bloco.l & byte2) == byte2) flagL--;
+	        if ((bloco.l & byte3) == byte3) flagL--;
+	        if ((bloco.l & byte4) == byte4) flagL--;
 
-        // Escreve saida no arquivo
-        fwrite(&bloco.l, tam_1byte, flagL, f_out);
-        fwrite(&bloco.r, tam_1byte, flagR, f_out);
+	        if ((bloco.r & byte1) == byte1) flagR--;
+	        if ((bloco.r & byte2) == byte2) flagR--;
+	        if ((bloco.r & byte3) == byte3) flagR--;
+	        if ((bloco.r & byte4) == byte4) flagR--;
 
-        if (flagL < 4 || flagR < 4) break;
-        // end-escreveBlocoSaida
+	        // Escreve saida no arquivo
+	        fwrite(&bloco.l, tam_1byte, flagL, f_out);
+	        fwrite(&bloco.r, tam_1byte, flagR, f_out);
 
-        i++;
+	        if (flagL < 4 || flagR < 4) break;
+	        // end-escreveBlocoSaida
 
+	        i++;
+	    }
     }
 
     // Escreve no log texto final e fecha fluxo
